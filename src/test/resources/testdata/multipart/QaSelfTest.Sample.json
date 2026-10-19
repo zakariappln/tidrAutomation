@@ -1,0 +1,6 @@
+{
+  "Name": "QA {uniqueString}",
+  "IsActive": true,
+  "DeletedId": ["{uuid}", "11111111-1111-1111-1111-111111111111"],
+  "Files": "@file:qa-selftest.txt"
+}

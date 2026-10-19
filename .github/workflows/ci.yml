@@ -1,0 +1,103 @@
+name: automation
+
+on:
+  pull_request:
+  schedule:
+    - cron: "0 2 * * *"        # nightly regression 02:00 UTC
+  workflow_dispatch:
+    inputs:
+      groups:
+        description: TestNG groups / Cucumber tags (comma separated)
+        default: regression
+      env:
+        description: Target environment (staging | uat)
+        default: staging
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PLAYWRIGHT_VERSION: "1.63.0"   # keep in sync with pom.xml
+
+jobs:
+  glue-gate:
+    name: compile + dry-run (0 undefined / ambiguous steps)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '25', cache: maven }
+      - run: mvn -B -Pci -Dspotless.check.skip=true -DskipTests compile test-compile
+      - run: mvn -B test -Dsuite=testng-api.xml -Dcucumber.execution.dry-run=true -Dcucumber.filter.tags=""
+      - run: mvn -B test -Dsuite=testng.xml -Dcucumber.execution.dry-run=true -Dcucumber.filter.tags=""
+
+  api:
+    needs: glue-gate
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.env || 'staging' }}      # GitHub Environment holds per-env vars/secrets
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '25', cache: maven }
+      - run: mvn -B clean test -Dsuite=testng-api.xml -Denv=${{ inputs.env || 'staging' }}
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+          AUTH_BASE_URL: ${{ vars.AUTH_BASE_URL }}
+          AUTH_USERNAME: ${{ secrets.AUTH_USERNAME }}
+          AUTH_PASSWORD: ${{ secrets.AUTH_PASSWORD }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: allure-results-api, path: target/allure-results }
+
+  ui:
+    needs: glue-gate
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/playwright/java:v1.63.0-noble   # browsers pre-installed; pin to pom version
+    environment: ${{ inputs.env || 'staging' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '25', cache: maven }
+      - name: Run UI suite
+        run: >
+          mvn -B clean test -Dsuite=testng.xml
+          -Dgroups=${{ github.event_name == 'pull_request' && 'smoke' || (inputs.groups || 'regression') }}
+          -Dbrowser=${{ matrix.browser }} -Denv=${{ inputs.env || 'staging' }}
+        env:
+          BASE_URL: ${{ vars.BASE_URL }}
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+          AUTH_BASE_URL: ${{ vars.AUTH_BASE_URL }}
+          AUTH_USERNAME: ${{ secrets.AUTH_USERNAME }}
+          AUTH_PASSWORD: ${{ secrets.AUTH_PASSWORD }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allure-results-ui-${{ matrix.browser }}
+          path: |
+            target/allure-results
+            target/traces
+            target/videos
+
+  report:
+    needs: [api, ui]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { pattern: allure-results-*, merge-multiple: true, path: allure-results }
+      - uses: actions/checkout@v4
+        with: { ref: gh-pages, path: gh-pages }
+        continue-on-error: true
+      - name: Restore history
+        run: mkdir -p allure-results/history && cp -r gh-pages/history/* allure-results/history/ 2>/dev/null || true
+      - uses: simple-elf/allure-report-action@v1
+        with: { allure_results: allure-results, allure_report: allure-report }
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: allure-report

@@ -1,0 +1,5 @@
+- [ThreatIDR env quirks](project_threatidr_env_quirks.md) — users-page 500 race, missing uploads dir, client checks shadowing server messages, DB reads blocked
+- [ThreatIDR test fixtures](project_threatidr_test_fixtures.md) — persistent qa-auto-* users/roles to keep; admin-account safety rules; rate-limit/pgrep tips
+- [ThreatIDR RPZ and domain lists](project_threatidr_rpz_and_domains.md) — querying bind zones directly, Apply semantics, User Log DataTable global, gunicorn abort
+- [ThreatIDR dashboard/threats/reports](project_threatidr_dashboard_threats_reports.md) — styledSelect filters, URL TypeError, PDFs w/o text layer, shared PDF name, heatmap month bug
+- [ThreatIDR settings traps](project_threatidr_settings_traps.md) — named.conf DNS lockout, no bell pushes, aria-labelledby ids, /patch_update, CSRF 413, CKEditor

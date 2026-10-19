@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  PPLN Automation - UI (Playwright) + API (APIRequestContext) in one module.
+  Test styles: Gherkin (Cucumber-TestNG runners) and plain TestNG classes, both reported to Allure.
+
+  Runtime switches (all -D overridable, see README):
+    -Dsuite=testng.xml | testng-api.xml     which root suite file Surefire runs
+    -Dgroups=smoke,branches                 TestNG groups; runners translate them to Cucumber tags
+    -Denv=staging|uat|prod                 config/default.properties + config/<env>.properties (or TEST_ENV)
+    -Dbrowser= -Dheadless= -Dslow.mo.ms=    browser switches (UI only)
+    -Dcucumber.execution.dry-run=true       glue gate: 0 undefined / ambiguous steps
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.ppln</groupId>
+  <artifactId>ppln-automation</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+  <name>PPLN Automation (UI + API)</name>
+
+  <properties>
+    <maven.compiler.release>25</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    <!-- Versions resolved from Maven Central maven-metadata.xml on 2026-09-21 (latest stable). -->
+    <playwright.version>1.63.0</playwright.version>
+    <testng.version>7.12.0</testng.version>
+    <cucumber.version>7.34.8</cucumber.version>
+    <allure.version>3.0.0</allure.version>
+    <allure-commandline.version>2.46.1</allure-commandline.version>
+    <aspectj.version>1.9.25</aspectj.version>
+    <assertj.version>3.27.7</assertj.version>
+    <jackson.version>2.22.2</jackson.version>
+    <slf4j.version>2.0.19</slf4j.version>
+    <logback.version>1.6.3</logback.version>
+    <json-schema-validator.version>3.0.7</json-schema-validator.version>
+    <jsonpath.version>3.0.0</jsonpath.version>
+    <!-- Resolved from Maven Central maven-metadata.xml on 2026-10-17 (latest stable). -->
+    <dnsjava.version>3.6.5</dnsjava.version>
+    <!-- 2.0.22: the PDFBox release already in the offline ~/.m2 (2026-10-19); test scope only. -->
+    <pdfbox.version>2.0.22</pdfbox.version>
+    <compiler.version>3.16.0</compiler.version>
+    <surefire.version>3.5.6</surefire.version> <!-- 3.6.x has no TestNG provider; see surefire plugin comment -->
+    <allure-maven.version>3.1.0</allure-maven.version>
+    <spotless.version>3.10.2</spotless.version>
+
+    <!-- runtime switches; all overridable with -D -->
+    <suite>testng.xml</suite>
+    <groups></groups>
+    <excludedGroups>wip</excludedGroups>
+    <!-- env is NOT pinned here: Surefire forwards -Denv from the CLI, and TEST_ENV
+         or config/default.properties supply the defaults (see ConfigManager). -->
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>io.qameta.allure</groupId>
+        <artifactId>allure-bom</artifactId>
+        <version>${allure.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.cucumber</groupId>
+        <artifactId>cucumber-bom</artifactId>
+        <version>${cucumber.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <!-- Playwright: browsers + APIRequestContext (one runtime for UI and API) -->
+    <dependency>
+      <groupId>com.microsoft.playwright</groupId>
+      <artifactId>playwright</artifactId>
+      <version>${playwright.version}</version>
+    </dependency>
+
+    <!-- TestNG -->
+    <dependency>
+      <groupId>org.testng</groupId>
+      <artifactId>testng</artifactId>
+      <version>${testng.version}</version>
+    </dependency>
+
+    <!-- Allure -->
+    <dependency>
+      <groupId>io.qameta.allure</groupId>
+      <artifactId>allure-testng</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.qameta.allure</groupId>
+      <artifactId>allure-playwright</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.qameta.allure</groupId>
+      <artifactId>allure-cucumber7-jvm</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- Cucumber (Gherkin execution through TestNG) -->
+    <dependency>
+      <groupId>io.cucumber</groupId>
+      <artifactId>cucumber-java</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.cucumber</groupId>
+      <artifactId>cucumber-testng</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.cucumber</groupId>
+      <artifactId>cucumber-picocontainer</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- Assertions -->
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <version>${assertj.version}</version>
+    </dependency>
+
+    <!-- JSON -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>${jackson.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.datatype</groupId>
+      <artifactId>jackson-datatype-jsr310</artifactId>
+      <version>${jackson.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.jayway.jsonpath</groupId>
+      <artifactId>json-path</artifactId>
+      <version>${jsonpath.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- JSON Schema contract checks. 3.x is built on Jackson 3 (tools.jackson.*), which coexists with Jackson 2. -->
+    <dependency>
+      <groupId>com.networknt</groupId>
+      <artifactId>json-schema-validator</artifactId>
+      <version>${json-schema-validator.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!--
+      DNS resolution against a SPECIFIC nameserver. Added 2026-10-17 for ThreatIDR's Blocked/Allowed
+      Domains scenarios: the app's RPZ enforcement must be verified by querying the bind9 container
+      directly (e.g. 127.0.0.1:53), not via the JVM's/host's configured system resolver, which
+      java.net.InetAddress cannot target explicitly. dnsjava is the standard, lightweight (~340KB,
+      zero transitive dependencies), Apache-2.0 pure-Java choice for exactly this - see
+      core/dns/DnsClient.
+    -->
+    <dependency>
+      <groupId>dnsjava</groupId>
+      <artifactId>dnsjava</artifactId>
+      <version>${dnsjava.version}</version>
+    </dependency>
+
+    <!--
+      Text extraction from the Reports PDFs (summary report content, Japanese glyphs). Added
+      2026-10-19, test scope: only step definitions read PDFs.
+    -->
+    <dependency>
+      <groupId>org.apache.pdfbox</groupId>
+      <artifactId>pdfbox</artifactId>
+      <version>${pdfbox.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- Logging -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${slf4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>${logback.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>${compiler.version}</version>
+        <configuration>
+          <release>${maven.compiler.release}</release>
+          <parameters>true</parameters> <!-- lets Allure @Step read {param} names -->
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>${surefire.version}</version>
+        <configuration>
+          <suiteXmlFiles>
+            <suiteXmlFile>${suite}</suiteXmlFile>
+          </suiteXmlFiles>
+          <groups>${groups}</groups>
+          <excludedGroups>${excludedGroups}</excludedGroups>
+          <testFailureIgnore>false</testFailureIgnore>
+          <trimStackTrace>false</trimStackTrace>
+          <argLine>
+            -javaagent:"${settings.localRepository}/org/aspectj/aspectjweaver/${aspectj.version}/aspectjweaver-${aspectj.version}.jar"
+            -Dfile.encoding=UTF-8
+          </argLine>
+          <systemPropertyVariables>
+            <allure.results.directory>${project.build.directory}/allure-results</allure.results.directory>
+          </systemPropertyVariables>
+        </configuration>
+        <dependencies>
+          <!-- Native TestNG provider, pinned. Surefire 3.6.x removed it and runs TestNG only through the
+               JUnit Platform testng-engine, which ignores suiteXmlFiles, suite listeners and -Dgroups;
+               3.5.6 is therefore the newest usable Surefire for this suite-file based setup. -->
+          <dependency>
+            <groupId>org.apache.maven.surefire</groupId>
+            <artifactId>surefire-testng</artifactId>
+            <version>${surefire.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjweaver</artifactId>
+            <version>${aspectj.version}</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+
+      <plugin>
+        <groupId>io.qameta.allure</groupId>
+        <artifactId>allure-maven</artifactId>
+        <version>${allure-maven.version}</version>
+        <configuration>
+          <reportVersion>${allure-commandline.version}</reportVersion>
+          <resultsDirectory>${project.build.directory}/allure-results</resultsDirectory>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>com.diffplug.spotless</groupId>
+        <artifactId>spotless-maven-plugin</artifactId>
+        <version>${spotless.version}</version>
+        <configuration>
+          <java>
+            <googleJavaFormat><style>AOSP</style></googleJavaFormat>
+            <removeUnusedImports/>
+          </java>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <!-- mvn test -Pui  ===  -Dsuite=testng.xml -->
+    <profile>
+      <id>ui</id>
+      <properties><suite>testng.xml</suite></properties>
+    </profile>
+    <!-- mvn test -Papi ===  -Dsuite=testng-api.xml -->
+    <profile>
+      <id>api</id>
+      <properties><suite>testng-api.xml</suite></properties>
+    </profile>
+    <!-- strict compilation + format check for CI -->
+    <profile>
+      <id>ci</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <compilerArgs>
+                <arg>-Xlint:all</arg>
+                <arg>-Werror</arg>
+              </compilerArgs>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>com.diffplug.spotless</groupId>
+            <artifactId>spotless-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <goals><goal>check</goal></goals>
+                <phase>validate</phase>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>

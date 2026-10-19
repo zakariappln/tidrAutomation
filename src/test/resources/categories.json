@@ -1,0 +1,6 @@
+[
+  { "name": "Product defects", "matchedStatuses": ["failed"], "messageRegex": "(?s).*(AssertionError|Expecting|expected).*" },
+  { "name": "Test infrastructure", "matchedStatuses": ["broken"], "messageRegex": "(?s).*(TimeoutError|PlaywrightException|net::ERR|IllegalStateException).*" },
+  { "name": "Flaky (passed on retry)", "matchedStatuses": ["passed"], "flaky": true },
+  { "name": "Skipped / WIP", "matchedStatuses": ["skipped"] }
+]

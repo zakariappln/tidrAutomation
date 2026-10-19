@@ -1,0 +1,25 @@
+# build
+target/
+*.class
+*.log
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# reports and browser artifacts
+/allure-results/
+/allure-report/
+# saved UI sessions (cookies) reused between runs - see StorageStateManager
+.auth-state/
+target/auth/
+
+# local secrets / overrides
+.env
+*.local.properties
+__pycache__/
+
+# allure commandline downloaded by allure-maven + report history
+.allure/

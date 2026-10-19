@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<!--
+  API SUITE - runs every API test class.
+  Run:   mvn clean test -Dsuite=testng-api.xml
+         mvn clean test -Dsuite=testng-api.xml -Dgroups=smoke
+  parallel="classes": one APIRequestContext per class per thread (see BaseApiTest).
+-->
+<suite name="API Suite"
+       parallel="classes"
+       thread-count="8"
+       verbose="1"
+       configfailurepolicy="continue">
+
+  <listeners>
+    <listener class-name="com.company.automation.core.listeners.TestListener"/>
+    <listener class-name="com.company.automation.core.listeners.SuiteListener"/>
+    <listener class-name="com.company.automation.core.listeners.AnnotationTransformer"/>
+    <listener class-name="io.qameta.allure.testng.AllureTestNg"/>
+  </listeners>
+
+  <test name="API Tests" preserve-order="false">
+    <groups>
+      <run>
+        <include name="api"/>
+        <exclude name="wip"/>
+      </run>
+    </groups>
+
+    <packages>
+      <package name="com.company.automation.api.tests.*"/>
+    </packages>
+  </test>
+
+</suite>

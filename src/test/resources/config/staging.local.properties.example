@@ -1,0 +1,27 @@
+# Copy to staging.local.properties (git-ignored) and fill in your logins and hosts.
+# Any key can also be given as -Dkey=value or as an env var (BASE_URL, AUTH_ADMIN_PASSWORD ...).
+
+# Hosts (optional here; usually in staging.properties once known)
+base.url=
+api.base.url=
+auth.base.url=
+
+# Default credential pair, used by the API suite and by any role without its own pair.
+auth.username=
+auth.password=
+
+# Per-role pairs: "I log in as "admin"" resolves to auth.admin.*
+auth.admin.username=
+auth.admin.password=
+
+# Browser visibility: true = headless, false = watch the browser (or pass -Dheadless=false per run).
+headless=true
+slow.mo.ms=0
+
+# Soft checks: true = report every failed verification and keep going; false = stop at the first one.
+soft.checks=false
+
+# Saved UI session reuse (default .auth-state/<env>/<role>.json, 480 min). Lower the age if the
+# app's session cookie expires sooner; delete the file to force a fresh login.
+#auth.state.dir=.auth-state
+#auth.state.max.age.minutes=480

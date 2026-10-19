@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<!--
+  UI REGRESSION SUITE (group / tag based).
+  Run:   mvn clean test -Dsuite=testng.xml                -> smoke + regression
+         mvn clean test -Dsuite=testng.xml -Dgroups=smoke -> only smoke
+         mvn clean test -Dsuite=testng.xml -Dgroups=checkout,login
+  Surefire's -Dgroups overrides the <groups> block below; 'wip' is always excluded.
+-->
+<suite name="UI Regression Suite"
+       parallel="methods"
+       thread-count="4"
+       data-provider-thread-count="4"
+       verbose="1"
+       configfailurepolicy="continue">
+
+  <listeners>
+    <listener class-name="com.company.automation.core.listeners.TestListener"/>
+    <listener class-name="com.company.automation.core.listeners.SuiteListener"/>
+    <listener class-name="com.company.automation.core.listeners.AnnotationTransformer"/>
+    <listener class-name="io.qameta.allure.testng.AllureTestNg"/>
+  </listeners>
+
+  <test name="UI Tests" preserve-order="false">
+    <groups>
+      <define name="ui-default">
+        <include name="smoke"/>
+        <include name="regression"/>
+      </define>
+      <run>
+        <include name="ui-default"/>
+        <exclude name="wip"/>
+        <exclude name="api"/>
+      </run>
+    </groups>
+
+    <packages>
+      <package name="com.company.automation.ui.tests.*"/>
+    </packages>
+  </test>
+
+</suite>

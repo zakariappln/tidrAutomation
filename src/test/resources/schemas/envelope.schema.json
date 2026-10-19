@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PPLN API response envelope",
+  "description": "Uniform backend response. `data` may be an object, an array, a paged wrapper { totalRecords, data: [...] }, a scalar (several endpoints answer with a bare string or boolean) or null.",
+  "type": "object",
+  "required": [
+    "statusCode",
+    "message",
+    "data"
+  ],
+  "properties": {
+    "statusCode": {
+      "type": "integer"
+    },
+    "message": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "data": {
+      "type": [
+        "object",
+        "array",
+        "string",
+        "number",
+        "boolean",
+        "null"
+      ]
+    }
+  }
+}
