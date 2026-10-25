@@ -27,6 +27,7 @@ Defect report run:
 | `@serial-settings` | changes global app state (language, timezone, RPZ actions, Access Control, DNS bypass, syslog, alert feed). Serialised against each other and restores the original value afterwards |
 | `@serial-users` | (Users and Roles features, and every scenario that creates or deletes a user while running) never overlaps another `@serial-users` scenario: the Users page answers HTTP 500 while another request creates or deletes a user (it indexes `user.roles[0]` while lazily loading roles). See `SerialUsersHooks` |
 | `@destructive` | touches the only admin account; safe only because the app is expected to refuse |
+| `@custom-dns` | end-to-end blocking of a real domain (google.com) checked from a fresh browser. Needs the test host's DNS set to ThreatIDR's bind9 (`nameserver 127.0.0.1`) by hand. Blocks/unblocks can take up to ~60 s to be enforced after Apply (BIND RPZ `min-update-interval`); the steps wait up to 75 s and attach the measured delay. Serial with every `@serial-settings` scenario |
 
 Lock order when tags combine: `@serial-users`, then `@serial-settings`, then `@serial-auth`.
 For `@serial-settings`, read the original value before changing it and restore it in cleanup:

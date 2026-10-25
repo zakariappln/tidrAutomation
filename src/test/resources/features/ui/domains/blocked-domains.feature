@@ -115,3 +115,38 @@ Feature: Blocked Domains
     And the blocked domains list should be ordered by "Creation Date" newest first
     When I go to page 2 of the blocked domains list
     Then the blocked domains pager should show page 2 as current
+
+  # ---- End-to-end with a real domain: does the block actually work for a protected client? ----
+  # The test host's DNS is set to ThreatIDR's bind9 by hand, so the browser resolves through RPZ
+  # like any protected client. google.com is blocked for EVERY client of this bind9 while these run
+  # (up to ~2 min each). Each reachability check launches a fresh browser (no Chromium DNS cache).
+  # TIMING (verified by hand 2026-10-24): Apply reloads the RPZ zone within ~1 s, but bind ENFORCES a
+  # changed response-policy zone at most once per min-update-interval (BIND default 60 s; named.conf
+  # does not set it), so a block or unblock can take up to ~60 s to bite. The steps poll the host
+  # resolver for up to 75 s and attach the measured delay ("DNS propagation ...") to the report.
+  # Both are @serial-settings (Apply is global), self-contained, and start by removing any
+  # leftover google.com row from an interrupted run.
+
+  @regression @positive @security @critical @serial-settings @custom-dns
+  Scenario: Blocking google.com makes it unreachable from the browser
+    Given "google.com" is not a blocked domain
+    Then "google.com" should be accessible from the browser
+    When I add the blocked domain "google.com"
+    And I click "Apply Changes"
+    Then its status should be "Active"
+    And "google.com" should not be accessible from the browser
+    And "www.google.com" should not be accessible from the browser
+
+  # Source fact: delete does NOT rewrite the zone; the block lasts until the next Apply. Apply is
+  # sent over HTTP because the page hides "Apply Changes" once the list is empty.
+  @regression @positive @security @serial-settings @custom-dns
+  Scenario: Deleting the google.com block makes it reachable again
+    Given "google.com" is not a blocked domain
+    When I add the blocked domain "google.com"
+    And I click "Apply Changes"
+    Then its status should be "Active"
+    And "google.com" should not be accessible from the browser
+    When I delete the blocked domain "google.com"
+    And the blocked domain changes are applied
+    Then "google.com" should be accessible from the browser
+    And "www.google.com" should be accessible from the browser

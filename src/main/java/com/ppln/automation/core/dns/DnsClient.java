@@ -109,6 +109,21 @@ public final class DnsClient {
     }
 
     /**
+     * True when this nameserver answers the zone's SOA authoritatively or by forwarding, i.e. it is
+     * (or forwards to) the server that hosts the zone. False on any error or empty answer.
+     */
+    public boolean querySoa(String zone) {
+        try {
+            Message response = send(zone, Type.SOA);
+            return response.getRcode() == Rcode.NOERROR
+                    && response.getSection(Section.ANSWER).stream()
+                            .anyMatch(r -> r.getType() == Type.SOA);
+        } catch (IllegalStateException unreachable) {
+            return false;
+        }
+    }
+
+    /**
      * One raw query and its raw response; dnsjava's higher-level {@code Lookup} would follow CNAMEs
      * and cache, hiding the rcode {@code dig} shows.
      */

@@ -299,6 +299,31 @@ public final class AdminHttp implements AutoCloseable {
                 withCsrf().setForm(FormData.create().set("csrf_token", csrf)));
     }
 
+    /**
+     * Id of the row holding exactly {@code domain} (case-insensitive) on any page of the list, or
+     * empty. Pages are 10 rows; stops at the first page without rows.
+     */
+    public Optional<Integer> domainId(DomainList list, String domain) {
+        Pattern row =
+                Pattern.compile(
+                        Pattern.quote(list.rowIdPrefix)
+                                + "(\\d+)\"[^>]*>\\s*<td[^>]*>\\s*"
+                                + Pattern.quote(htmlEscape(domain))
+                                + "\\s*</td>",
+                        Pattern.CASE_INSENSITIVE);
+        for (int page = 1; page <= 100; page++) {
+            String html = request.get("/en/" + list.segment + "/?page=" + page).text();
+            if (!html.contains(list.rowIdPrefix)) {
+                return Optional.empty();
+            }
+            Matcher m = row.matcher(html);
+            if (m.find()) {
+                return Optional.of(Integer.parseInt(m.group(1)));
+            }
+        }
+        return Optional.empty();
+    }
+
     // ---- threats ----
 
     /**

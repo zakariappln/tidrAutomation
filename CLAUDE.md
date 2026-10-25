@@ -55,6 +55,9 @@ Switches: `-Denv=staging|uat|prod  -Dbrowser=chromium|firefox|webkit  -Dheadless
   disposable users per scenario. Locks: `@serial-users` -> `@serial-settings` -> login guard, all with timeouts.
 - NEVER save RPZ category settings or a valid Access Control change against the shared bind9: the app
   rewrites `allow-query` and locks the test host out of DNS, and it cannot undo it.
+- `@custom-dns` scenarios (blocked-domains.feature) block google.com and check real reachability from a fresh browser;
+  the host's resolver must be ThreatIDR's bind9 (`nameserver 127.0.0.1`), set by hand. Blocks take up to
+  ~60 s to be enforced after Apply (BIND RPZ min-update-interval default).
 - No REST API features (out of scope). Agent notes on environment traps: `.claude/agent-memory/bdd-step-writer/`.
 
 ### UI sessions and the login rate limit (2026-10-18)
